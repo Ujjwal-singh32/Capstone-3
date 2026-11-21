@@ -90,11 +90,46 @@ test("missing block fingerprint keeps verification modified but omits tamper hea
         fs.writeFileSync(fpFile, fp);
     }
 });
-test("the original, unprotected upload verifies as UNREGISTERED (not VERIFIED)", async () => {
+test("the original, unprotected upload is never VERIFIED; its pixels are matched to the registered image as a POTENTIAL_MATCH", async () => {
     const v = await verifyImage(orig, who);
-    assert.equal(v.status, "UNREGISTERED");
+    assert.equal(v.status, "POTENTIAL_MATCH");
     assert.equal(v.cryptoValid, false);
+    assert.equal(v.contentMatch?.regId, regId);
 });
+test("an unrelated image still verifies as UNREGISTERED (no false content match)", async () => {
+    const v = await verifyImage(await makePhoto(512, 384, 777), who);
+    assert.equal(v.status, "UNREGISTERED");
+    assert.equal(v.contentMatch, undefined);
+});
+test("crops WITHOUT a surviving watermark are caught by content matching: crop of the unprotected original, resized crop, edited crop", async () => {
+    const big = await makePhoto(1024, 768, 55), r = await registerImage(alice, big, "big.png", "dwt");
+    const sharp = (await import("sharp")).default, crop = (b, l, t, w, h) => sharp(b).extract({ left: l, top: t, width: w, height: h }).png().toBuffer();
+    const protectedBig = fs.readFileSync(path.join(FILES, r.id + ".png"));
+    const cases = {
+        "crop of the unprotected original": await crop(big, 100, 80, 614, 460),
+        "small crop of the original": await crop(big, 300, 200, 400, 300),
+        "crop of the original, JPEG q80": await A.jpeg(80)(await crop(big, 100, 80, 614, 460)),
+        "crop of the protected copy, then resized to 50%": await A.resize(0.5)(await crop(protectedBig, 100, 80, 614, 460)),
+        "crop of the original, resized by 0.62": await A.resize(0.62)(await crop(big, 150, 100, 700, 500)),
+        "crop of the original with brightness change": await A.brightness(20)(await crop(big, 100, 100, 500, 380)),
+    };
+    for (const [name, img] of Object.entries(cases)) {
+        await assert.rejects(registerImage(bob, img, "crop.png", "dwt"), (e) => e.status === 409 && e.message.includes(r.regId), name);
+        const v = await verifyImage(img, who);
+        assert.notEqual(v.status, "VERIFIED", name);
+        assert.equal(v.status, "POTENTIAL_MATCH", name);
+        assert.equal(v.contentMatch?.regId, r.regId, name);
+        assert.ok(v.contentMatch.confidence >= 88 && v.contentMatch.confidence <= 100, name);
+        assert.ok(v.contentMatch.originalPreview.startsWith("data:image/jpeg") && v.contentMatch.uploadPreview.startsWith("data:image/jpeg"), name);
+    }
+    const c = (await verifyImage(cases["small crop of the original"], who)).contentMatch;
+    assert.ok(c.retainedPct < 20 && Math.abs(c.region.left - 300) <= 8 && Math.abs(c.region.top - 200) <= 8, JSON.stringify(c.region));
+    const stored = (await load()).verifications.filter(x => x.status === "POTENTIAL_MATCH").at(-1);
+    assert.equal(stored.result.contentMatch.originalPreview, undefined); // previews are not persisted
+    // a genuinely different photo of the same size is NOT blocked
+    await registerImage(bob, await makePhoto(1024, 768, 56), "different.png", "dwt");
+});
+
 test("duplicates are rejected: same file, and an already-watermarked copy submitted by someone else", async () => {
     await assert.rejects(registerImage(alice, orig, "again.png", "dwt"), /already registered/);
     await assert.rejects(registerImage(bob, protectedPng, "stolen.png", "dwt"), /already registered/);

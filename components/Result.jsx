@@ -28,6 +28,17 @@ export default function Result({ r }) {
       </>}
       {t && t.bad.length === 0 && <p>No region differs materially from the registered copy.</p>}
       {r.patternDetected && <p>A watermark-like pattern was detected, so the image probably derives from a protected one, but it could not be authenticated.</p>}
+      {r.contentMatch && (() => { const c = r.contentMatch, g = c.region; return <>
+        <p><b>Match detected: <a href={`/verify/${c.regId}`}>{c.regId}</a></b>{c.owner ? ` (registered by ${c.owner})` : ""}</p>
+        <dl>
+          <dt>Confidence (pixel similarity)</dt><dd>{c.confidence}% · {c.confidence >= 97 ? "very high" : c.confidence >= 93 ? "high" : "moderate"}</dd>
+          <dt>Portion of registered image</dt><dd>{c.retainedPct}%{g && c.retainedPct < 97 ? ` (matched region ${g.width} x ${g.height} px at x=${g.left}, y=${g.top} of ${c.registeredSize[0]} x ${c.registeredSize[1]})` : ""}</dd>
+        </dl>
+        {(c.uploadPreview || c.originalPreview) && <div className="match">
+          {c.uploadPreview && <figure><img src={c.uploadPreview} alt="The uploaded image"/><figcaption>Uploaded image{c.retainedPct < 97 ? " (the cropped part)" : ""}</figcaption></figure>}
+          {c.originalPreview && <figure><img src={c.originalPreview} alt="Registered image with the matched region outlined"/><figcaption>Registered image{c.retainedPct < 97 ? ", matched region outlined in red" : ""} (low-resolution preview)</figcaption></figure>}
+        </div>}
+      </>; })()}
       {r.similar?.length > 0 && <>
         <p><b>Visually similar registered images</b> (perceptual hash; supporting evidence only, not proof of ownership):</p>
         <ul>{r.similar.map((s) => <li key={s.regId}><a href={`/verify/${s.regId}`}>{s.regId}</a> · Hamming distance {s.distance}/64</li>)}</ul>

@@ -204,6 +204,11 @@ input::placeholder { color: #65756a; }
 .status.MODIFIED { color: var(--warn); background: rgba(232, 200, 109, .08); }
 .status.UNREGISTERED { color: var(--neutral); }
 .status.INCONCLUSIVE { color: var(--warn); }
+.status.POTENTIAL_MATCH { color: var(--bad); background: rgba(255, 123, 113, .08); }
+.match { display: flex; flex-wrap: wrap; gap: 14px; margin: 10px 0; }
+.match figure { margin: 0; max-width: 100%; }
+.match img { display: block; max-width: 100%; border: 1px solid var(--line, #345); border-radius: 6px; }
+.match figcaption { font-size: 12px; opacity: .75; margin-top: 4px; }
 .card[aria-live] { margin-top: 22px; }
 dl { display: grid; grid-template-columns: minmax(150px, max-content) 1fr; gap: 7px 18px; margin: 14px 0; font-size: 12px; }
 dt { color: var(--dim); } dd { margin: 0; }

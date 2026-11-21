@@ -14,6 +14,9 @@ Added: DCT embedding, SSIM, Reed-Solomon ECC, brightness compensation, crop/rota
 
 Cross-device deployments must share `SECUREMARK_SECRET`, `SIGNING_KEY_PEM`, Neon state, and the `securemark_image_files` table. Legacy per-device files can be imported with `npm run migrate:files`; signature status can be audited/resigned with the scripts documented in README.
 
+## Latest fix: cropped images were registered as new
+Crops of the unprotected original, and crops that were resized/re-encoded (watermark lost), passed the registration gate because it relied on watermark recovery only. `lib/match.js` now does crop/scale-aware pixel matching against all registered images; used in `registerImage` (409) and `verifyImage` (INCONCLUSIVE + `contentMatch`). Tests in `test/flow.test.js`. Known gaps: rotated/mirrored crops; linear cost in registered-image count (move coarse maps to a persisted/indexed store if the catalogue grows beyond a few hundred images).
+
 ## Known limits / ideas (priority order)
 1. Contrast scaling and arbitrary-angle rotation break the lattice. Ideas: embed a known pilot pattern for scale/rotation estimation; or normalise contrast using block statistics before decoding.
 2. DCT is fragile to blur and JPEG < q70 (see `research/results.md`); DWT is the default for that reason.

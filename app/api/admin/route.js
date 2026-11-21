@@ -12,7 +12,7 @@ export const GET = route(async () => {
         if (v.status !== "VERIFIED")
             byIp.set(v.ip, (byIp.get(v.ip) || 0) + 1);
     return NextResponse.json({
-        stats: { users: db.users.length, images: db.images.length, verifications: db.verifications.length, verified: count("VERIFIED"), modified: count("MODIFIED"), unregistered: count("UNREGISTERED"), inconclusive: count("INCONCLUSIVE"), failedLogins, suspiciousIps: [...byIp.values()].filter(n => n >= 10).length },
+        stats: { users: db.users.length, images: db.images.length, verifications: db.verifications.length, verified: count("VERIFIED"), modified: count("MODIFIED"), unregistered: count("UNREGISTERED"), inconclusive: count("INCONCLUSIVE"), potentialMatch: count("POTENTIAL_MATCH"), failedLogins, suspiciousIps: [...byIp.values()].filter(n => n >= 10).length },
         users: db.users.map(u => ({ id: u.id, name: u.name, email: u.email, role: u.role, active: u.active, verified: u.verified, at: u.at, images: db.images.filter(i => i.userId === u.id).length })),
         images: db.images.slice(-200).reverse().map(i => ({ id: i.id, regId: i.record.regId, name: i.name, owner: db.users.find(u => u.id === i.userId)?.name, at: i.record.at, alg: i.record.alg, psnr: i.psnr })),
         verifications: db.verifications.slice(-150).reverse().map(v => ({ id: v.id, at: v.at, status: v.status, kind: v.kind, regId: v.regId, ip: v.ip, userId: v.userId })),
